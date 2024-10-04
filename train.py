@@ -1,12 +1,12 @@
 import networkx as nx
-import xarray as xr
-import numpy as np
 import torch
 from torch_geometric.utils import from_networkx
-from torch_geometric.data import Data, DataLoader
-from torch_geometric.nn import GCNConv
+from torch_geometric.loader import DataLoader
+from torch_geometric.nn import GCNConv, global_mean_pool
+from sklearn.metrics import r2_score
 import os
 import pickle
+import pdb
 
 DIRECTORY_FOR_GRAPHS = "networkx_graphs"
 
@@ -20,43 +20,47 @@ def load_graphs_from_pickle(directory):
         with open(filepath, "rb") as f:
             G = pickle.load(f)
 
-        # Convertir los IDs de los nodos a enteros consecutivos
+        # Transform the node IDs to consecutive integers
         G = nx.convert_node_labels_to_integers(G, label_attribute="original_id")
 
-        # Convertir los atributos de las aristas a flotantes
+        # Transform the edge attributes to floats
         for u, v, attr in G.edges(data=True):
             for key, value in attr.items():
                 attr[key] = float(value)
 
-        # Convertir el grafo de NetworkX a un objeto Data de PyTorch Geometric
+        # Transform the graph to a PyTorch Geometric Data object
         data = from_networkx(G)
 
-        # Asignar características de nodos (x)
+        # Assign node features (x)
         num_nodes = data.num_nodes
-        data.x = torch.zeros((num_nodes, 1))  # Características ficticias
+        data.x = torch.zeros((num_nodes, 1))
 
-        # Extraer las etiquetas del grafo
+        # y = [osnr, snr, ber]
         labels = G.graph.get("labels", {})
         y = torch.tensor(
             [labels["osnr"], labels["snr"], labels["ber"]], dtype=torch.float
         )
         data.y = y
 
-        # Añadir el objeto Data a la lista
+        # Add the Data object to the list
         data_list.append(data)
     return data_list
 
 class GCN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels):
         super().__init__()
+        # Convolutional layer
         self.conv1 = GCNConv(in_channels, hidden_channels)
-        self.conv2 = GCNConv(hidden_channels, out_channels)
+
+        # Linear dense layer
+        self.lin = torch.nn.Linear(hidden_channels, out_channels)
 
     def forward(self, data):
-        x, edge_index = data.x, data.edge_index
+        x, edge_index, batch = data.x, data.edge_index, data.batch
         x = self.conv1(x, edge_index)
         x = torch.relu(x)
-        x = self.conv2(x, edge_index)
+        x = global_mean_pool(x, batch)
+        x = self.lin(x)
         return x
 
 if __name__ == "__main__":
@@ -88,7 +92,8 @@ if __name__ == "__main__":
             data = data.to(device)
             optimizer.zero_grad()
             out = model(data)
-            loss = criterion(out, data.y)
+            y = data.y.view(-1, output_dim)
+            loss = criterion(out, y)
             loss.backward()
             optimizer.step()
 
@@ -97,8 +102,15 @@ if __name__ == "__main__":
     for data in test_loader:
         data = data.to(device)
         out = model(data)
-        test_loss += criterion(out, data.y).item()
+        y = data.y.view(-1, output_dim)
+        test_loss += criterion(out, y).item()
 
     test_loss /= len(test_loader)
+
+    # Calculate R2 score
+    y_true = y.cpu().detach().numpy()
+    y_pred = out.cpu().detach().numpy()
+    r2 = r2_score(y_true, y_pred)
+    print(f"R2 Score: {r2}")
 
     print(f"Test Loss: {test_loss}")
