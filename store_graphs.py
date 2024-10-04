@@ -1,5 +1,4 @@
 import to_graph as to_graph
-import networkx as nx
 import xarray as xr
 import os
 import pickle
@@ -20,7 +19,6 @@ if __name__ == "__main__":
         "osnr",
         "snr",
         "ber",
-        "conn_id",
     ]
 
     graphs = []

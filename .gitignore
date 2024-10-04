@@ -1,0 +1,4 @@
+__pycache__/*
+networkx_graphs/*
+*.nc
+*.pth
