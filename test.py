@@ -8,7 +8,6 @@ import os
 from datetime import datetime
 
 DIRECTORY_FOR_GRAPHS = "networkx_graphs"
-MODEL_PATH = "model.pth"
 
 if __name__ == "__main__":
     # Load the data and FEATURES
@@ -18,8 +17,10 @@ if __name__ == "__main__":
     test_data = data_list[int(len(data_list) * 0.8) :]
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
 
-    # Load the saved model state and parameters
-    checkpoint = torch.load(MODEL_PATH)
+    # Load the saved model state and parameters from the last training session
+    file_name = f"model_{len(os.listdir('models')) - 1}"
+    model_path = f"models/{file_name}.pth"
+    checkpoint = torch.load(model_path)
     model_params = checkpoint["model_params"]
 
     # Instantiate the model using the saved parameters
@@ -34,7 +35,7 @@ if __name__ == "__main__":
 
     # Load the model state dictionary
     model.load_state_dict(checkpoint["model_state_dict"])
-    print(f"Model loaded from {MODEL_PATH}")
+    print(f"Model loaded from {model_path}")
 
     # Evaluate the model
     model.eval()
@@ -66,8 +67,13 @@ if __name__ == "__main__":
     output_names = ["OSNR", "SNR", "BER"]  # Ensure this list matches your model outputs
 
     # Create the results folder
-    results_folder = f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    results_folder = f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file_name}"
     os.makedirs(results_folder, exist_ok=True)
+
+    # Save a json file with the r2 scores
+    with open(os.path.join(results_folder, "r2_scores.json"), "w") as f:
+        r2_dict = {output_names[i]: r2[i] for i in range(model_params["output_dim"])}
+        f.write(str(r2_dict))
 
     # Plot the results and save each to the folder
     for i in range(model_params["output_dim"]):

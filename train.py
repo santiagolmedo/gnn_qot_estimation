@@ -2,9 +2,9 @@ import torch
 from torch_geometric.loader import DataLoader
 from data_utils import load_graphs_from_pickle
 from models import GCN
+import os
 
 DIRECTORY_FOR_GRAPHS = "networkx_graphs"
-MODEL_PATH = "model.pth"
 
 if __name__ == "__main__":
     data_list, FEATURES = load_graphs_from_pickle(DIRECTORY_FOR_GRAPHS)
@@ -46,6 +46,9 @@ if __name__ == "__main__":
         if (epoch + 1) % 10 == 0:
             print(f"Epoch {epoch + 1}, Loss: {avg_loss:.4f}")
 
+    file_name = f"model_{len(os.listdir('models'))}.pth"
+    model_path = os.path.join("models", file_name)
+
     torch.save(
         {
             "model_state_dict": model.state_dict(),
@@ -57,6 +60,6 @@ if __name__ == "__main__":
                 "FEATURES": FEATURES,
             },
         },
-        MODEL_PATH,
+        model_path,
     )
-    print("Model saved to", MODEL_PATH)
+    print("Model saved to", model_path)
