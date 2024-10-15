@@ -6,7 +6,7 @@ import pickle
 DIRECTORY_FOR_GRAPHS = "networkx_graphs"
 
 if __name__ == "__main__":
-    dataset_path = "network_status_dataset_preview.nc"
+    dataset_path = "../antel-repo/hhi/datasets/network_status_dataset.nc"
     dataset = xr.open_dataset(dataset_path)
     samples = dataset["sample"].values  # Identifiers for samples
 
