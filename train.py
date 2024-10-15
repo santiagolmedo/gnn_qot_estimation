@@ -6,6 +6,10 @@ import os
 
 DIRECTORY_FOR_GRAPHS = "networkx_graphs"
 
+def mape_loss(output, target):
+    epsilon = 1e-8
+    return torch.mean(torch.abs((target - output) / (target + epsilon))) * 100
+
 if __name__ == "__main__":
     data_list, FEATURES = load_graphs_from_pickle(DIRECTORY_FOR_GRAPHS)
     edge_dim = len(FEATURES)
@@ -27,7 +31,7 @@ if __name__ == "__main__":
     model = model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    criterion = torch.nn.MSELoss()
+    criterion = mape_loss
 
     # Train the model
     for epoch in range(100):
