@@ -11,4 +11,5 @@
 source ~/miniconda3/bin/activate
 conda activate antel
 
-python store_graphs.py
+python store_graphs.py --dataset_type full --representation topological
+python store_graphs.py --dataset_type full --representation lightpath
