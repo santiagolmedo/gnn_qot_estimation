@@ -1,4 +1,5 @@
 __pycache__/*
-networkx_graphs/*
+networkx_graphs_lightpath/*
+networkx_graphs_topological/*
 *.nc
 *.pth
