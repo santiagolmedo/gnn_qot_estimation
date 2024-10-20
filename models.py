@@ -19,7 +19,7 @@ class GCN(torch.nn.Module):
             data.batch,
         )
         x = self.conv1(x, edge_index, edge_attr)
-        x = torch.relu(x)
+        x = torch.nn.functional.leaky_relu(x)
         x = global_mean_pool(x, batch)
         x = self.lin(x)
         return x

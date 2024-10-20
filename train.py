@@ -1,17 +1,17 @@
 import torch
 from torch_geometric.loader import DataLoader
-from data_utils import load_graphs_from_pickle
+from data_utils import load_topological_graphs_from_pickle
 from models import GCN
 import os
 
-DIRECTORY_FOR_GRAPHS = "networkx_graphs"
+DIRECTORY_FOR_GRAPHS = "networkx_graphs_topological"
 
 def mape_loss(output, target):
     epsilon = 1e-8
     return torch.mean(torch.abs((target - output) / (target + epsilon))) * 100
 
 if __name__ == "__main__":
-    data_list, FEATURES = load_graphs_from_pickle(DIRECTORY_FOR_GRAPHS)
+    data_list, FEATURES = load_topological_graphs_from_pickle(DIRECTORY_FOR_GRAPHS)
     edge_dim = len(FEATURES)
 
     train_data = data_list[: int(len(data_list) * 0.8)]
