@@ -5,10 +5,10 @@ import torch
 from torch_geometric.utils import from_networkx
 
 # Read every graph from the directory and return a list with all of them
-def load_topological_graphs_from_pickle(directory):
+def load_topological_graphs_from_pickle(directory="networkx_graphs_topological"):
     data_list = []
     FEATURES = set()
-    for filename in os.listdir(directory):
+    for filename in sorted(os.listdir(directory)):
         filepath = os.path.join(directory, filename)
         # Load the graph from the pickle file
         with open(filepath, "rb") as f:
@@ -69,10 +69,10 @@ def load_topological_graphs_from_pickle(directory):
     FEATURES = sorted(FEATURES)
     return data_list, FEATURES
 
-def load_lightpath_graphs_from_pickle(directory):
+def load_lightpath_graphs_from_pickle(directory="networkx_graphs_lightpath"):
     data_list = []
     NODE_FEATURES = set()
-    for filename in os.listdir(directory):
+    for filename in sorted(os.listdir(directory)):
         filepath = os.path.join(directory, filename)
         # Load the graph from the pickle file
         with open(filepath, "rb") as f:
