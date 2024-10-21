@@ -4,7 +4,6 @@ import networkx as nx
 import torch
 from torch_geometric.utils import from_networkx
 
-# Read every graph from the directory and return a list with all of them
 def load_topological_graphs_from_pickle(directory="networkx_graphs_topological"):
     data_list = []
     FEATURES = set()
@@ -28,6 +27,9 @@ def load_topological_graphs_from_pickle(directory="networkx_graphs_topological")
 
         # Convert the graph to a PyTorch Geometric Data object
         data = from_networkx(G)
+
+        # Assign node_ids
+        data.node_ids = torch.arange(data.num_nodes)
 
         num_edges = data.edge_index.size(1)
         edge_attrs = []
@@ -54,7 +56,7 @@ def load_topological_graphs_from_pickle(directory="networkx_graphs_topological")
 
         # Assign node features (x)
         num_nodes = data.num_nodes
-        data.x = torch.zeros((num_nodes, 1))  # Placeholder for the node features
+        data.x = None  # No features, will use node_embeddings
 
         # y = [osnr, snr, ber]
         labels = G.graph.get("labels", {})
