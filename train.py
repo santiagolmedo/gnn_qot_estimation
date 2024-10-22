@@ -1,37 +1,32 @@
 import torch
 from torch_geometric.loader import DataLoader
 from data_utils import load_topological_graphs_from_pickle
-from models import GCN
+from models import TopologicalGNN
 import os
 
-DIRECTORY_FOR_GRAPHS = "networkx_graphs_topological"
-
-def mape_loss(output, target):
-    epsilon = 1e-8
-    return torch.mean(torch.abs((target - output) / (target + epsilon))) * 100
-
 if __name__ == "__main__":
-    data_list, FEATURES = load_topological_graphs_from_pickle(DIRECTORY_FOR_GRAPHS)
+    data_list, FEATURES = load_topological_graphs_from_pickle()
     edge_dim = len(FEATURES)
 
     train_data = data_list[: int(len(data_list) * 0.8)]
     test_data = data_list[int(len(data_list) * 0.8) :]
 
-    train_loader = DataLoader(train_data, batch_size=32, shuffle=False)
-    test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
+    train_loader = DataLoader(train_data, batch_size=128, shuffle=False)
+    test_loader = DataLoader(test_data, batch_size=128, shuffle=False)
 
     num_node_features = 1
+    num_nodes = 75
     hidden_channels = 16
     output_dim = 3
 
-    model = GCN(num_node_features, hidden_channels, output_dim, edge_dim=edge_dim)
+    model = TopologicalGNN(num_nodes, hidden_channels, output_dim, edge_dim=edge_dim, dropout_p=0.4)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    criterion = mape_loss
+    criterion = torch.nn.SmoothL1Loss()
 
     # Train the model
     for epoch in range(100):
@@ -57,7 +52,7 @@ if __name__ == "__main__":
         {
             "model_state_dict": model.state_dict(),
             "model_params": {
-                "num_node_features": num_node_features,
+                "num_nodes": num_nodes,
                 "hidden_channels": hidden_channels,
                 "output_dim": output_dim,
                 "edge_dim": edge_dim,
