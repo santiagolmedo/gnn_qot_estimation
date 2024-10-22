@@ -3,6 +3,10 @@ import pickle
 import networkx as nx
 import torch
 from torch_geometric.utils import from_networkx
+from constants import FEATURE_RANGES, TARGET_RANGES
+
+def min_max_scale(value, min_value, max_value):
+    return (value - min_value) / (max_value - min_value)
 
 def load_topological_graphs_from_pickle(directory="networkx_graphs_topological"):
     data_list = []
@@ -23,7 +27,9 @@ def load_topological_graphs_from_pickle(directory="networkx_graphs_topological")
         # Convert edge attributes to floats
         for u, v, attr in G.edges(data=True):
             for key, value in attr.items():
-                attr[key] = float(value)
+                min_val = FEATURE_RANGES[key]["min"]
+                max_val = FEATURE_RANGES[key]["max"]
+                attr[key] = min_max_scale(float(value), min_val, max_val)
 
         # Convert the graph to a PyTorch Geometric Data object
         data = from_networkx(G)
@@ -60,10 +66,14 @@ def load_topological_graphs_from_pickle(directory="networkx_graphs_topological")
 
         # y = [osnr, snr, ber]
         labels = G.graph.get("labels", {})
-        y = torch.tensor(
-            [labels["osnr"], labels["snr"], labels["ber"]], dtype=torch.float
-        )
-        data.y = y
+        y_scaled = []
+        for key in ["osnr", "snr", "ber"]:
+            min_val = TARGET_RANGES[key]["min"]
+            max_val = TARGET_RANGES[key]["max"]
+            value = labels.get(key, 0.0)
+            scaled_value = min_max_scale(float(value), min_val, max_val)
+            y_scaled.append(scaled_value)
+        data.y = torch.tensor(y_scaled, dtype=torch.float)
 
         # Add the Data object to the list
         data_list.append(data)
@@ -91,7 +101,9 @@ def load_lightpath_graphs_from_pickle(directory="networkx_graphs_lightpath"):
         for node, attr in G.nodes(data=True):
             for key, value in attr.items():
                 try:
-                    attr[key] = float(value)
+                    min_val = FEATURE_RANGES[key]["min"]
+                    max_val = FEATURE_RANGES[key]["max"]
+                    attr[key] = min_max_scale(float(value), min_val, max_val)
                 except ValueError:
                     pass
 
@@ -122,10 +134,14 @@ def load_lightpath_graphs_from_pickle(directory="networkx_graphs_lightpath"):
 
         # y = [osnr, snr, ber]
         labels = G.graph.get("labels", {})
-        y = torch.tensor(
-            [labels["osnr"], labels["snr"], labels["ber"]], dtype=torch.float
-        )
-        data.y = y
+        y_scaled = []
+        for key in ["osnr", "snr", "ber"]:
+            min_val = TARGET_RANGES[key]["min"]
+            max_val = TARGET_RANGES[key]["max"]
+            value = labels.get(key, 0.0)
+            scaled_value = min_max_scale(float(value), min_val, max_val)
+            y_scaled.append(scaled_value)
+        data.y = torch.tensor(y_scaled, dtype=torch.float)
         # Add the Data object to the list
         data_list.append(data)
 
