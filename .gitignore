@@ -1,6 +1,5 @@
 __pycache__/*
-networkx_graphs_lightpath/*
-networkx_graphs_topological/*
+networkx_graphs_*
 *.nc
 *.pth
 .DS_Store
