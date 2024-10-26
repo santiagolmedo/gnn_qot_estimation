@@ -3,6 +3,7 @@ from torch_geometric.loader import DataLoader
 from data_utils import load_topological_graphs_from_pickle
 from models import TopologicalGNN
 import os
+import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     data_list, FEATURES = load_topological_graphs_from_pickle()
@@ -19,7 +20,9 @@ if __name__ == "__main__":
     hidden_channels = 16
     output_dim = 3
 
-    model = TopologicalGNN(num_nodes, hidden_channels, output_dim, edge_dim=edge_dim, dropout_p=0.4)
+    model = TopologicalGNN(
+        num_nodes, hidden_channels, output_dim, edge_dim=edge_dim, dropout_p=0.4
+    )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -29,6 +32,7 @@ if __name__ == "__main__":
     criterion = torch.nn.SmoothL1Loss()
 
     # Train the model
+    loss_history = []
     for epoch in range(100):
         model.train()
         total_loss = 0
@@ -42,6 +46,7 @@ if __name__ == "__main__":
             optimizer.step()
             total_loss += loss.item() * data.num_graphs
         avg_loss = total_loss / len(train_loader.dataset)
+        loss_history.append(avg_loss)
         if (epoch + 1) % 10 == 0:
             print(f"Epoch {epoch + 1}, Loss: {avg_loss:.4f}")
 
@@ -62,3 +67,11 @@ if __name__ == "__main__":
         model_path,
     )
     print("Model saved to", model_path)
+
+    # Plot the loss history
+    plt.figure()
+    plt.plot(loss_history, label="Training Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.savefig(f"loss_{file_name}.png")

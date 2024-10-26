@@ -5,8 +5,10 @@ import torch
 from torch_geometric.utils import from_networkx
 from constants import FEATURE_RANGES, TARGET_RANGES
 
+
 def min_max_scale(value, min_value, max_value):
     return (value - min_value) / (max_value - min_value)
+
 
 def load_topological_graphs_from_pickle(directory="networkx_graphs_topological"):
     data_list = []
@@ -81,6 +83,7 @@ def load_topological_graphs_from_pickle(directory="networkx_graphs_topological")
     FEATURES = sorted(FEATURES)
     return data_list, FEATURES
 
+
 def load_lightpath_graphs_from_pickle(directory="networkx_graphs_lightpath"):
     data_list = []
     NODE_FEATURES = set()
@@ -117,12 +120,16 @@ def load_lightpath_graphs_from_pickle(directory="networkx_graphs_lightpath"):
         node_attr_dict = {}
         for node, attr in G.nodes(data=True):
             node_attr_dict[node] = [
-                attr.get(key, 0.0) for key in sorted(NODE_FEATURES) if isinstance(attr.get(key, 0.0), (int, float))
+                attr.get(key, 0.0)
+                for key in sorted(NODE_FEATURES)
+                if isinstance(attr.get(key, 0.0), (int, float))
             ]
 
         # Align the attributes with data.x
         for i in range(num_nodes):
-            node_id = i  # Since node labels are now consecutive integers starting from 0
+            node_id = (
+                i  # Since node labels are now consecutive integers starting from 0
+            )
             attr = node_attr_dict.get(node_id)
             if attr is None:
                 raise ValueError(f"Node {node_id} not found in node_attr_dict")

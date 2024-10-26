@@ -10,8 +10,10 @@ import json
 import numpy as np
 from constants import TARGET_RANGES
 
+
 def min_max_descale(scaled_value, min_value, max_value):
     return scaled_value * (max_value - min_value) + min_value
+
 
 if __name__ == "__main__":
     # Load the data and FEATURES
@@ -81,7 +83,7 @@ if __name__ == "__main__":
     y_pred = np.column_stack(y_pred_descaled)
 
     # Compute R2 per output
-    r2 = r2_score(y_true, y_pred, multioutput='raw_values')
+    r2 = r2_score(y_true, y_pred, multioutput="raw_values")
 
     print(f"R2 Score per output: {r2}")
 
@@ -89,7 +91,9 @@ if __name__ == "__main__":
     output_names = ["OSNR", "SNR", "BER"]
 
     # Create the results folder
-    results_folder = f"results/results_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file_name}"
+    results_folder = (
+        f"results/results_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file_name}"
+    )
     os.makedirs(results_folder, exist_ok=True)
 
     # Save the evaluation metrics to a JSON file
@@ -97,12 +101,11 @@ if __name__ == "__main__":
     for i in range(model_params["output_dim"]):
         results[output_names[i]] = {
             "R2": float(r2[i]),
-            "Test_SmoothL1_Loss": float(test_loss)
+            "Test_SmoothL1_Loss": float(test_loss),
         }
 
     with open(os.path.join(results_folder, "results.json"), "w") as f:
         json.dump(results, f, indent=4)
-
 
     # Plot the results and save each to the folder
     for i in range(model_params["output_dim"]):

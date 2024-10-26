@@ -3,8 +3,11 @@ import torch.nn.functional as F
 from torch_geometric.nn import global_mean_pool, TransformerConv, NNConv
 from torch.nn import Sequential as Seq, Linear, ReLU
 
+
 class TopologicalGNN(torch.nn.Module):
-    def __init__(self, num_nodes, hidden_channels, out_channels, edge_dim, dropout_p=0.5):
+    def __init__(
+        self, num_nodes, hidden_channels, out_channels, edge_dim, dropout_p=0.5
+    ):
         super().__init__()
         # Node embeddings
         self.node_embeddings = torch.nn.Embedding(num_nodes, hidden_channels)
@@ -18,13 +21,13 @@ class TopologicalGNN(torch.nn.Module):
         nn = Seq(
             Linear(edge_dim, edge_dim * 2),
             ReLU(),
-            Linear(edge_dim * 2, hidden_channels * hidden_channels)
+            Linear(edge_dim * 2, hidden_channels * hidden_channels),
         )
         self.conv2 = NNConv(
             in_channels=hidden_channels,
             out_channels=hidden_channels,
             nn=nn,
-            aggr='mean'
+            aggr="mean",
         )
 
         # Linear layer
@@ -54,4 +57,3 @@ class TopologicalGNN(torch.nn.Module):
         x = global_mean_pool(x, batch)
         x = self.lin(x)
         return x
-
