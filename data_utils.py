@@ -5,6 +5,7 @@ import torch
 from torch_geometric.utils import from_networkx
 from constants import FEATURE_RANGES, TARGET_RANGES
 
+
 def min_max_scale(value, min_value, max_value):
     return (value - min_value) / (max_value - min_value)
 
@@ -107,7 +108,7 @@ def load_lightpath_graphs_from_pickle(directory="networkx_graphs_lightpath"):
         # Convert node attributes to floats
         for node, attr in G.nodes(data=True):
             for key, value in attr.items():
-                if key == 'is_lut':
+                if key == "is_lut":
                     attr[key] = float(value)  # Keep original value (0.0 or 1.0)
                 else:
                     try:
