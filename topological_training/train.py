@@ -1,7 +1,7 @@
 import torch
 from torch_geometric.loader import DataLoader
 from data_utils import load_topological_graphs_from_pickle
-from models import TopologicalGNN
+from topological_training.models import TopologicalGNN
 import os
 import matplotlib.pyplot as plt
 
@@ -50,8 +50,10 @@ if __name__ == "__main__":
         if (epoch + 1) % 10 == 0:
             print(f"Epoch {epoch + 1}, Loss: {avg_loss:.4f}")
 
-    file_name = f"model_{len(os.listdir('models'))}.pth"
-    model_path = os.path.join("models", file_name)
+    if not os.path.exists("topological_training/models"):
+        os.makedirs("topological_training/models")
+    file_name = f"model_{len(os.listdir('topological_training/models'))}.pth"
+    model_path = os.path.join("topological_training/models", file_name)
 
     torch.save(
         {
