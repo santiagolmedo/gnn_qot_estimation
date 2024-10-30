@@ -1,5 +1,5 @@
-__pycache__/*
 networkx_graphs_*
 *.nc
 *.pth
 .DS_Store
+**/__pycache__/*
