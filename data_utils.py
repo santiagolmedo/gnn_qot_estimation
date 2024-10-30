@@ -96,6 +96,11 @@ def load_lightpath_graphs_from_pickle(directory="networkx_graphs_lightpath"):
         # Transform the node IDs to consecutive integers
         G = nx.convert_node_labels_to_integers(G, label_attribute="original_id")
 
+        # remove the 'original_id' attribute
+        for node, attr in G.nodes(data=True):
+            if "original_id" in attr:
+                del attr["original_id"]
+
         # Collect all node attribute names
         for _, attr in G.nodes(data=True):
             NODE_FEATURES.update(attr.keys())
@@ -103,12 +108,15 @@ def load_lightpath_graphs_from_pickle(directory="networkx_graphs_lightpath"):
         # Convert node attributes to floats
         for node, attr in G.nodes(data=True):
             for key, value in attr.items():
-                try:
-                    min_val = FEATURE_RANGES[key]["min"]
-                    max_val = FEATURE_RANGES[key]["max"]
-                    attr[key] = min_max_scale(float(value), min_val, max_val)
-                except ValueError:
-                    pass
+                if key == "is_lut":
+                    attr[key] = float(value)  # Keep original value (0.0 or 1.0)
+                else:
+                    try:
+                        min_val = FEATURE_RANGES[key]["min"]
+                        max_val = FEATURE_RANGES[key]["max"]
+                        attr[key] = min_max_scale(float(value), min_val, max_val)
+                    except ValueError:
+                        pass
 
         # Convert the graph to a PyTorch Geometric Data object
         data = from_networkx(G)
@@ -154,4 +162,5 @@ def load_lightpath_graphs_from_pickle(directory="networkx_graphs_lightpath"):
 
     # Convert NODE_FEATURES to a sorted list for consistent ordering
     NODE_FEATURES = sorted(NODE_FEATURES)
-    return data_list, NODE_FEATURES
+    feature_indices = {key: idx for idx, key in enumerate(NODE_FEATURES)}
+    return data_list, NODE_FEATURES, feature_indices

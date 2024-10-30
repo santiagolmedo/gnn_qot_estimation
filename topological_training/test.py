@@ -1,7 +1,7 @@
 import torch
 from torch_geometric.loader import DataLoader
 from data_utils import load_topological_graphs_from_pickle
-from models import TopologicalGNN
+from topological_training.models import TopologicalGNN
 from sklearn.metrics import r2_score
 import matplotlib.pyplot as plt
 import os
@@ -24,8 +24,8 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
 
     # Load the saved model state and parameters from the last training session
-    file_name = f"model_{len(os.listdir('models')) - 1}"
-    model_path = f"models/{file_name}.pth"
+    file_name = f"model_{len(os.listdir('topological_training/models')) - 1}"
+    model_path = f"topological_training/models/{file_name}.pth"
     checkpoint = torch.load(model_path)
     model_params = checkpoint["model_params"]
 
@@ -91,9 +91,7 @@ if __name__ == "__main__":
     output_names = ["OSNR", "SNR", "BER"]
 
     # Create the results folder
-    results_folder = (
-        f"results/results_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file_name}"
-    )
+    results_folder = f"topological_training/results/results_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file_name}"
     os.makedirs(results_folder, exist_ok=True)
 
     # Save the evaluation metrics to a JSON file
