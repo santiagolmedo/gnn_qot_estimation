@@ -49,7 +49,7 @@ if __name__ == "__main__":
     y_true_list = []
     y_pred_list = []
 
-    criterion = torch.nn.SmoothL1Loss()  # Usamos SmoothL1Loss para la evaluación
+    criterion = torch.nn.SmoothL1Loss()
 
     with torch.no_grad():
         for data in test_loader:
