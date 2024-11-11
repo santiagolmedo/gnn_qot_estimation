@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=train_t
+#SBATCH --job-name=train_l
 #SBATCH --ntasks=1
 #SBATCH --mem=100000
 #SBATCH --time=48:00:00
@@ -12,4 +12,4 @@
 source ~/miniconda3/bin/activate
 conda activate gnn_env
 
-python -m topological_training.train
+python -m lightpath_training.train

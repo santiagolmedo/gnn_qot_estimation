@@ -13,6 +13,7 @@ def min_max_scale(value, min_value, max_value):
 def load_topological_graphs_from_pickle(directory="networkx_graphs_topological"):
     data_list = []
     FEATURES = set()
+    counter = 0
     for filename in sorted(os.listdir(directory)):
         filepath = os.path.join(directory, filename)
         # Load the graph from the pickle file
@@ -79,6 +80,10 @@ def load_topological_graphs_from_pickle(directory="networkx_graphs_topological")
 
         # Add the Data object to the list
         data_list.append(data)
+
+        counter += 1
+        if counter % 15000 == 0:
+            print(f"Processed {counter} graphs")
     # Convert FEATURES to a sorted list for consistent ordering
     FEATURES = sorted(FEATURES)
     return data_list, FEATURES
@@ -87,6 +92,7 @@ def load_topological_graphs_from_pickle(directory="networkx_graphs_topological")
 def load_lightpath_graphs_from_pickle(directory="networkx_graphs_lightpath"):
     data_list = []
     NODE_FEATURES = set()
+    counter = 0
     for filename in sorted(os.listdir(directory)):
         filepath = os.path.join(directory, filename)
         # Load the graph from the pickle file
@@ -159,6 +165,10 @@ def load_lightpath_graphs_from_pickle(directory="networkx_graphs_lightpath"):
         data.y = torch.tensor(y_scaled, dtype=torch.float)
         # Add the Data object to the list
         data_list.append(data)
+
+        counter += 1
+        if counter % 15000 == 0:
+            print(f"Processed {counter} graphs")
 
     # Convert NODE_FEATURES to a sorted list for consistent ordering
     NODE_FEATURES = sorted(NODE_FEATURES)
