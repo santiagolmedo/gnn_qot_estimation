@@ -32,11 +32,11 @@ if __name__ == "__main__":
     test_len = total_len - train_len
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_len, test_len])
 
-    batch_size = 512
+    batch_size = 1024
     num_workers = 4
 
     indices = list(range(train_len))
-    split = int(np.floor(0.2 * train_len))
+    split = int(np.floor(0.15 * train_len))
     np.random.shuffle(indices)
     train_idx = indices[split:]
     train_sampler = SubsetRandomSampler(train_idx)
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
             y_true.append(y.cpu().detach().numpy())
             y_pred.append(out.cpu().detach().numpy())
-            if batch_idx % 10:
+            if (batch_idx + 1) % 100 == 0:
                 log_message(f"Epoch [{epoch+1}/{num_epochs}], Step [{batch_idx}/{len(train_loader)}], Loss: {loss.item():.4f}")
 
         avg_loss = total_loss / len(train_dataset)
