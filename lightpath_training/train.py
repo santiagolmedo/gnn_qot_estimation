@@ -1,5 +1,6 @@
 import torch
 from torch_geometric.loader import DataLoader
+from torch.utils.data import SubsetRandomSampler
 from sklearn.metrics import r2_score
 import matplotlib.pyplot as plt
 import os
@@ -31,10 +32,16 @@ if __name__ == "__main__":
     test_len = total_len - train_len
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_len, test_len])
 
-    batch_size = 2048
+    batch_size = 512
     num_workers = 4
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    indices = list(range(train_len))
+    split = int(np.floor(0.2 * train_len))
+    np.random.shuffle(indices)
+    train_idx = indices[split:]
+    train_sampler = SubsetRandomSampler(train_idx)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, sampler=train_sampler)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     # Define the model
@@ -55,7 +62,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
     criterion = torch.nn.SmoothL1Loss()
 
-    num_epochs = 50
+    num_epochs = 100
     loss_history = []
     r2_history = []
     skipped_graphs = 0
