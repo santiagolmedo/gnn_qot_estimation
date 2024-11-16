@@ -4,22 +4,37 @@ from sklearn.metrics import r2_score
 import matplotlib.pyplot as plt
 import os
 import numpy as np
-from data_utils import load_lightpath_graphs_from_pickle
+import time
+from lightpath_training.dataset import LightpathDataset
 from lightpath_training.models import LightpathGNN
 
+def log_message(*args):
+    message = " ".join(map(str, args))
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    full_message = f"{timestamp} - {message}"
+    print(full_message)
+    with open(
+        os.path.join(os.path.dirname(__file__), "model_logger.txt"),
+        "a",
+    ) as logger:
+        logger.write(full_message + "\n")
+
 if __name__ == "__main__":
-    # Load the data
-    data_list, NODE_FEATURES, feature_indices = load_lightpath_graphs_from_pickle()
-    num_features = len(NODE_FEATURES)
+    # Load the dataset
+    dataset = LightpathDataset()
+    num_features = len(dataset.node_features)
+    feature_indices = dataset.feature_indices
 
-    # Split the data into training and testing sets
-    train_data = data_list[: int(len(data_list) * 0.8)]
-    test_data = data_list[int(len(data_list) * 0.8) :]
+    # Split the dataset into training and testing sets
+    total_len = len(dataset)
+    train_len = int(total_len * 0.8)
+    test_len = total_len - train_len
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_len, test_len])
 
-    train_loader = DataLoader(train_data, batch_size=1, shuffle=False)
-    test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=1, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
-    # Model
+    # Define the model
     hidden_channels = 32
     output_dim = 3  # OSNR, SNR, BER
 
@@ -37,7 +52,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
     criterion = torch.nn.SmoothL1Loss()
 
-    num_epochs = 50
+    num_epochs = 25
     loss_history = []
     r2_history = []
     skipped_graphs = 0
@@ -48,7 +63,7 @@ if __name__ == "__main__":
         y_true = []
         y_pred = []
 
-        for data in train_loader:
+        for batch_idx, data in enumerate(train_loader):
             data = data.to(device)
             optimizer.zero_grad()
 
@@ -67,6 +82,9 @@ if __name__ == "__main__":
             y_true.append(y.cpu().detach().numpy())
             y_pred.append(out.cpu().detach().numpy())
 
+            if batch_idx % 100000 == 0:
+                log_message(f"Epoch [{epoch+1}/{num_epochs}], Step [{batch_idx}/{len(train_loader)}], Loss: {loss.item():.4f}")
+
         avg_loss = total_loss / len(train_loader)
         loss_history.append(avg_loss)
 
@@ -76,7 +94,7 @@ if __name__ == "__main__":
         r2 = r2_score(y_true, y_pred, multioutput="uniform_average")
         r2_history.append(r2)
 
-        print(f"Epoch {epoch + 1}, Loss: {avg_loss:.4f}, R2 Score: {r2:.4f}")
+        log_message(f"Epoch {epoch + 1}, Loss: {avg_loss:.4f}, R2 Score: {r2:.4f}")
 
     # Save the model
     root_dir = "lightpath_training/models"
@@ -85,7 +103,7 @@ if __name__ == "__main__":
     file_name = f"model_{len(os.listdir(root_dir))}.pth"
     model_path = os.path.join(root_dir, file_name)
 
-    print(f"Skipped {skipped_graphs} graphs due to missing LUT nodes.")
+    log_message(f"Skipped {skipped_graphs} graphs due to missing LUT nodes.")
 
     torch.save(
         {
@@ -94,12 +112,13 @@ if __name__ == "__main__":
                 "in_channels": num_features,
                 "hidden_channels": hidden_channels,
                 "output_dim": output_dim,
-                "NODE_FEATURES": NODE_FEATURES,
+                "NODE_FEATURES": dataset.node_features,
+                "feature_indices": feature_indices,
             },
         },
         model_path,
     )
-    print("Model saved to", model_path)
+    log_message("Model saved to", model_path)
 
     # Plot the loss history
     plt.figure(figsize=(12, 5))
