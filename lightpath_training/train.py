@@ -31,8 +31,11 @@ if __name__ == "__main__":
     test_len = total_len - train_len
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_len, test_len])
 
-    train_loader = DataLoader(train_dataset, batch_size=1, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+    batch_size = 2048
+    num_workers = 4
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     # Define the model
     hidden_channels = 32
@@ -52,7 +55,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
     criterion = torch.nn.SmoothL1Loss()
 
-    num_epochs = 25
+    num_epochs = 50
     loss_history = []
     r2_history = []
     skipped_graphs = 0
@@ -68,24 +71,29 @@ if __name__ == "__main__":
             optimizer.zero_grad()
 
             try:
-                out = model(data)  # Output shape: [output_dim]
+                out, lut_batch = model(data)  # Output shape: [num_lut_nodes, output_dim]
             except ValueError as e:
-                skipped_graphs += 1
+                skipped_graphs += data.num_graphs
                 continue
-            y = data.y.to(device)  # Shape: [output_dim]
+
+            y = data.y.to(device)  # Shape: [batch_size, output_dim]
+            y = y[lut_batch]  # Select y for graphs with LUT nodes
+
+            if y.size(0) == 0:
+                skipped_graphs += data.num_graphs
+                continue
 
             loss = criterion(out, y)
             loss.backward()
             optimizer.step()
-            total_loss += loss.item()
+            total_loss += loss.item() * y.size(0)
 
             y_true.append(y.cpu().detach().numpy())
             y_pred.append(out.cpu().detach().numpy())
-
-            if batch_idx % 100000 == 0:
+            if batch_idx % 10:
                 log_message(f"Epoch [{epoch+1}/{num_epochs}], Step [{batch_idx}/{len(train_loader)}], Loss: {loss.item():.4f}")
 
-        avg_loss = total_loss / len(train_loader)
+        avg_loss = total_loss / len(train_dataset)
         loss_history.append(avg_loss)
 
         # Calculate R2 score

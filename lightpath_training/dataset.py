@@ -105,6 +105,6 @@ class LightpathDataset(Dataset):
             value = labels.get(key, 0.0)
             scaled_value = min_max_scale(float(value), min_val, max_val)
             y_scaled.append(scaled_value)
-        data.y = torch.tensor(y_scaled, dtype=torch.float)
+        data.y = torch.tensor(y_scaled, dtype=torch.float).unsqueeze(0)
 
         return data
