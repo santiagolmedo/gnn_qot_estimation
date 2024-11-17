@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     batch_size = 512
     num_workers = 4
-    num_epochs = 100
+    num_epochs = 50
     loss_history = []
     r2_history = []
     skipped_graphs = 0
@@ -58,10 +58,10 @@ if __name__ == "__main__":
     criterion = torch.nn.SmoothL1Loss()
 
     for epoch in range(num_epochs):
-        # Reorder indices in each epoch to use 30% of the training data
+        # Reorder indices in each epoch to use 20% of the training data
         indices = list(range(train_len))
         np.random.shuffle(indices)
-        split = int(np.floor(0.3 * train_len))
+        split = int(np.floor(0.2 * train_len))
         train_idx = indices[:split]
         train_sampler = SubsetRandomSampler(train_idx)
 
@@ -72,6 +72,11 @@ if __name__ == "__main__":
             sampler=train_sampler,
             num_workers=num_workers,
         )
+
+        # if it is the first epoch, log the DataLoaders and model architecture
+        if epoch == 0:
+            log_message("Train DataLoader length:", len(train_loader))
+            log_message("Model architecture:", model)
 
         model.train()
         total_loss = 0
@@ -106,8 +111,8 @@ if __name__ == "__main__":
             y_true.append(y.cpu().detach().numpy())
             y_pred.append(out.cpu().detach().numpy())
 
-            # Log only every third of the data per epoch
-            if (batch_idx + 1) % (len(train_loader) // 3) == 0:
+            # Log only every fifth of the data per epoch
+            if (batch_idx + 1) % (len(train_loader) // 5) == 0:
                 log_message(f"Epoch [{epoch+1}/{num_epochs}], Step [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.4f}")
 
         avg_loss = total_loss / len(train_idx)
