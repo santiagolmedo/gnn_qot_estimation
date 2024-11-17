@@ -6,13 +6,22 @@ import pickle
 from torch_geometric.utils import from_networkx
 from constants import FEATURE_RANGES, TARGET_RANGES
 
+
 def min_max_scale(value, min_value, max_value):
     return (value - min_value) / (max_value - min_value)
 
+
 class LightpathDataset(Dataset):
-    def __init__(self, directory="networkx_graphs_lightpath", node_features=None, feature_indices=None):
+    def __init__(
+        self,
+        directory="networkx_graphs_lightpath",
+        node_features=None,
+        feature_indices=None,
+    ):
         self.directory = directory
-        self.file_list = sorted([f for f in os.listdir(directory) if f.endswith(".gpickle")])
+        self.file_list = sorted(
+            [f for f in os.listdir(directory) if f.endswith(".gpickle")]
+        )
         self.N = len(self.file_list)
 
         # If node_features and feature_indices are provided, use them
@@ -34,7 +43,9 @@ class LightpathDataset(Dataset):
                 counter += 1
             # Convert node_features to a sorted list for consistent ordering
             self.node_features = sorted(self.node_features)
-            self.feature_indices = {key: idx for idx, key in enumerate(self.node_features)}
+            self.feature_indices = {
+                key: idx for idx, key in enumerate(self.node_features)
+            }
 
     def __len__(self):
         return self.N
@@ -44,8 +55,8 @@ class LightpathDataset(Dataset):
         filepath = os.path.join(self.directory, filename)
         # Load the graph from the pickle file
         try:
-          with open(filepath, "rb") as f:
-              G = pickle.load(f)
+            with open(filepath, "rb") as f:
+                G = pickle.load(f)
         except (pickle.UnpicklingError, EOFError, FileNotFoundError) as e:
             print(f"Error al cargar {filepath}: {e}")
             return self.__getitem__((idx + 1) % len(self.file_list))
@@ -88,7 +99,9 @@ class LightpathDataset(Dataset):
 
         # Align the attributes with data.x
         for i in range(num_nodes):
-            node_id = i  # Since node labels are now consecutive integers starting from 0
+            node_id = (
+                i  # Since node labels are now consecutive integers starting from 0
+            )
             attr = node_attr_dict.get(node_id)
             if attr is None:
                 raise ValueError(f"Node {node_id} not found in node_attr_dict")

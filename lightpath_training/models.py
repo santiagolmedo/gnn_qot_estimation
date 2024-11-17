@@ -3,8 +3,11 @@ import torch.nn.functional as F
 from torch_geometric.nn import GATConv, BatchNorm
 from torch.nn import Linear, Dropout, LeakyReLU
 
+
 class LightpathGNN(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, output_dim, is_lut_index, dropout_p=0.5):
+    def __init__(
+        self, in_channels, hidden_channels, output_dim, is_lut_index, dropout_p=0.5
+    ):
         super().__init__()
         # GNN layers
         self.conv1 = GATConv(in_channels, hidden_channels, heads=4, concat=True)

@@ -9,6 +9,7 @@ import time
 from lightpath_training.dataset import LightpathDataset
 from lightpath_training.models import LightpathGNN
 
+
 def log_message(*args):
     message = " ".join(map(str, args))
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -20,6 +21,7 @@ def log_message(*args):
     ) as logger:
         logger.write(full_message + "\n")
 
+
 if __name__ == "__main__":
     # Load the dataset
     dataset = LightpathDataset()
@@ -30,7 +32,9 @@ if __name__ == "__main__":
     total_len = len(dataset)
     train_len = int(total_len * 0.8)
     test_len = total_len - train_len
-    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_len, test_len])
+    train_dataset, test_dataset = torch.utils.data.random_split(
+        dataset, [train_len, test_len]
+    )
 
     batch_size = 512
     num_workers = 4
@@ -89,7 +93,9 @@ if __name__ == "__main__":
             optimizer.zero_grad()
 
             try:
-                out, lut_batch = model(data)  # Output shape: [num_lut_nodes, output_dim]
+                out, lut_batch = model(
+                    data
+                )  # Output shape: [num_lut_nodes, output_dim]
             except ValueError as e:
                 skipped_graphs += data.num_graphs
                 skipped_graphs_epoch += data.num_graphs
@@ -113,7 +119,9 @@ if __name__ == "__main__":
 
             # Log only every fifth of the data per epoch
             if (batch_idx + 1) % (len(train_loader) // 5) == 0:
-                log_message(f"Epoch [{epoch+1}/{num_epochs}], Step [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.4f}")
+                log_message(
+                    f"Epoch [{epoch+1}/{num_epochs}], Step [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.4f}"
+                )
 
         avg_loss = total_loss / len(train_idx)
         loss_history.append(avg_loss)
@@ -124,11 +132,13 @@ if __name__ == "__main__":
             y_pred = np.vstack(y_pred)
             r2 = r2_score(y_true, y_pred, multioutput="uniform_average")
         else:
-            r2 = float('nan')
+            r2 = float("nan")
         r2_history.append(r2)
 
         log_message(f"Epoch {epoch + 1}, Loss: {avg_loss:.4f}, R2 Score: {r2:.4f}")
-        log_message(f"Skipped {skipped_graphs_epoch} graphs in this epoch due to missing LUT nodes.")
+        log_message(
+            f"Skipped {skipped_graphs_epoch} graphs in this epoch due to missing LUT nodes."
+        )
 
     # Save the model
     root_dir = "lightpath_training/models"
