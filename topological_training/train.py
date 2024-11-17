@@ -9,6 +9,7 @@ import time
 from topological_training.dataset import TopologicalDataset
 from topological_training.models import TopologicalGNN
 
+
 def log_message(*args):
     message = " ".join(map(str, args))
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -17,9 +18,10 @@ def log_message(*args):
     with open("model_logger.txt", "a") as logger:
         logger.write(full_message + "\n")
 
+
 if __name__ == "__main__":
     # Load the dataset
-    dataset = TopologicalDataset(directory='networkx_graphs_topological')
+    dataset = TopologicalDataset(directory="networkx_graphs_topological")
     edge_dim = dataset.edge_dim
 
     # Split the dataset into training and testing sets

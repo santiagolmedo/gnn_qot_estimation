@@ -6,8 +6,10 @@ import pickle
 from torch_geometric.utils import from_networkx
 from constants import FEATURE_RANGES, TARGET_RANGES
 
+
 def min_max_scale(value, min_value, max_value):
     return (value - min_value) / (max_value - min_value)
+
 
 class TopologicalDataset(Dataset):
     def __init__(self, directory="networkx_graphs_topological", features=None):
@@ -83,7 +85,8 @@ class TopologicalDataset(Dataset):
         for u, v, attr in G.edges(data=True):
             # Ensure consistent order of FEATURES
             edge_attr_dict[(u, v)] = [
-                attr.get(key, 0.0) for key in self.FEATURES
+                attr.get(key, 0.0)
+                for key in self.FEATURES
                 if isinstance(attr.get(key, 0.0), (int, float))
             ]
 
