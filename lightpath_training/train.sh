@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=train_l
-#SBATCH --ntasks=4
-#SBATCH --mem=50000
+#SBATCH --ntasks=1
+#SBATCH --mem=150000
 #SBATCH --time=100:00:00
 #SBATCH --partition=normal
 #SBATCH --qos=normal

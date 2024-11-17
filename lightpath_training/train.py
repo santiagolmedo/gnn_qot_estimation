@@ -32,17 +32,12 @@ if __name__ == "__main__":
     test_len = total_len - train_len
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_len, test_len])
 
-    batch_size = 1024
+    batch_size = 512
     num_workers = 4
-
-    indices = list(range(train_len))
-    split = int(np.floor(0.15 * train_len))
-    np.random.shuffle(indices)
-    train_idx = indices[split:]
-    train_sampler = SubsetRandomSampler(train_idx)
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, sampler=train_sampler)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    num_epochs = 100
+    loss_history = []
+    r2_history = []
+    skipped_graphs = 0
 
     # Define the model
     hidden_channels = 32
@@ -62,16 +57,27 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
     criterion = torch.nn.SmoothL1Loss()
 
-    num_epochs = 100
-    loss_history = []
-    r2_history = []
-    skipped_graphs = 0
-
     for epoch in range(num_epochs):
+        # Reorder indices in each epoch to use 30% of the training data
+        indices = list(range(train_len))
+        np.random.shuffle(indices)
+        split = int(np.floor(0.3 * train_len))
+        train_idx = indices[:split]
+        train_sampler = SubsetRandomSampler(train_idx)
+
+        # Create DataLoader with the new sampler
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=batch_size,
+            sampler=train_sampler,
+            num_workers=num_workers,
+        )
+
         model.train()
         total_loss = 0
         y_true = []
         y_pred = []
+        skipped_graphs_epoch = 0
 
         for batch_idx, data in enumerate(train_loader):
             data = data.to(device)
@@ -81,6 +87,7 @@ if __name__ == "__main__":
                 out, lut_batch = model(data)  # Output shape: [num_lut_nodes, output_dim]
             except ValueError as e:
                 skipped_graphs += data.num_graphs
+                skipped_graphs_epoch += data.num_graphs
                 continue
 
             y = data.y.to(device)  # Shape: [batch_size, output_dim]
@@ -88,6 +95,7 @@ if __name__ == "__main__":
 
             if y.size(0) == 0:
                 skipped_graphs += data.num_graphs
+                skipped_graphs_epoch += data.num_graphs
                 continue
 
             loss = criterion(out, y)
@@ -97,19 +105,25 @@ if __name__ == "__main__":
 
             y_true.append(y.cpu().detach().numpy())
             y_pred.append(out.cpu().detach().numpy())
-            if (batch_idx + 1) % 100 == 0:
-                log_message(f"Epoch [{epoch+1}/{num_epochs}], Step [{batch_idx}/{len(train_loader)}], Loss: {loss.item():.4f}")
 
-        avg_loss = total_loss / len(train_dataset)
+            # Log only every third of the data per epoch
+            if (batch_idx + 1) % (len(train_loader) // 3) == 0:
+                log_message(f"Epoch [{epoch+1}/{num_epochs}], Step [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.4f}")
+
+        avg_loss = total_loss / len(train_idx)
         loss_history.append(avg_loss)
 
         # Calculate R2 score
-        y_true = np.vstack(y_true)
-        y_pred = np.vstack(y_pred)
-        r2 = r2_score(y_true, y_pred, multioutput="uniform_average")
+        if len(y_true) > 0 and len(y_pred) > 0:
+            y_true = np.vstack(y_true)
+            y_pred = np.vstack(y_pred)
+            r2 = r2_score(y_true, y_pred, multioutput="uniform_average")
+        else:
+            r2 = float('nan')
         r2_history.append(r2)
 
         log_message(f"Epoch {epoch + 1}, Loss: {avg_loss:.4f}, R2 Score: {r2:.4f}")
+        log_message(f"Skipped {skipped_graphs_epoch} graphs in this epoch due to missing LUT nodes.")
 
     # Save the model
     root_dir = "lightpath_training/models"
@@ -118,7 +132,7 @@ if __name__ == "__main__":
     file_name = f"model_{len(os.listdir(root_dir))}.pth"
     model_path = os.path.join(root_dir, file_name)
 
-    log_message(f"Skipped {skipped_graphs} graphs due to missing LUT nodes.")
+    log_message(f"Total skipped {skipped_graphs} graphs due to missing LUT nodes.")
 
     torch.save(
         {
