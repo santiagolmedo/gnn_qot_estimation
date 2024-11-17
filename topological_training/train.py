@@ -15,7 +15,10 @@ def log_message(*args):
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
     full_message = f"{timestamp} - {message}"
     print(full_message)
-    with open("model_logger.txt", "a") as logger:
+    with open(
+        os.path.join(os.path.dirname(__file__), "model_logger.txt"),
+        "a",
+    ) as logger:
         logger.write(full_message + "\n")
 
 
