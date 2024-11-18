@@ -1,8 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch_geometric.nn import global_mean_pool, TransformerConv, NNConv
-from torch.nn import Sequential as Seq, Linear, ReLU
-
+from torch.nn import Sequential as Seq, Linear, ReLU, Dropout, LeakyReLU
 
 class TopologicalGNN(torch.nn.Module):
     def __init__(
@@ -30,8 +29,13 @@ class TopologicalGNN(torch.nn.Module):
             aggr="mean",
         )
 
-        # Linear layer
-        self.lin = torch.nn.Linear(hidden_channels, out_channels)
+        # MLP for prediction
+        self.mlp = torch.nn.Sequential(
+            Linear(hidden_channels, hidden_channels),
+            LeakyReLU(),
+            Dropout(p=dropout_p),
+            Linear(hidden_channels, out_channels),
+        )
 
         # Dropout
         self.dropout = torch.nn.Dropout(p=dropout_p)
@@ -55,5 +59,6 @@ class TopologicalGNN(torch.nn.Module):
         x = self.dropout(x)
 
         x = global_mean_pool(x, batch)
-        x = self.lin(x)
-        return x
+        # MLP for prediction
+        out = self.mlp(x)
+        return out
