@@ -36,7 +36,7 @@ if __name__ == "__main__":
     val_dataset = Subset(dataset, range(train_len, train_len + val_len))
     test_dataset = Subset(dataset, range(train_len + val_len, total_len))
 
-    batch_size = 2048
+    batch_size = 1024
     num_workers = 4
     num_epochs = 100
     loss_history = []
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     model = model.to(device)
 
     # Define the optimizer and scheduler
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.5, momentum=0.9)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 
     criterion = torch.nn.SmoothL1Loss()
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     )
 
     # Divide the training dataset into chunks (without randomization)
-    num_chunks = int(1 / 0.20)  # Using 20% of data per epoch
+    num_chunks = int(1 / 0.10)  # Using 10% of data per epoch
     chunk_size = train_len // num_chunks
     train_indices = list(range(train_len))
 
