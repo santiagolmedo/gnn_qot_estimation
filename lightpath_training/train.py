@@ -36,15 +36,15 @@ if __name__ == "__main__":
     val_dataset = Subset(dataset, range(train_len, train_len + val_len))
     test_dataset = Subset(dataset, range(train_len + val_len, total_len))
 
-    batch_size = 1024
+    batch_size = 512
     num_workers = 4
-    num_epochs = 100
+    num_epochs = 30
     loss_history = []
     val_loss_history = []
     r2_history = []
     val_r2_history = []
     skipped_graphs = 0
-    patience = 30
+    patience = 10
     best_val_r2 = -np.inf
     patience_counter = 0
 
