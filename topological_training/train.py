@@ -2,12 +2,12 @@ import torch
 from torch_geometric.loader import DataLoader
 from torch.utils.data import Subset
 from sklearn.metrics import r2_score
-import matplotlib.pyplot as plt
 import os
 import numpy as np
 import time
 from topological_training.dataset import TopologicalDataset
 from topological_training.models import TopologicalGNN
+import json
 
 def log_message(*args):
     message = " ".join(map(str, args))
@@ -35,14 +35,14 @@ if __name__ == "__main__":
     val_dataset = Subset(dataset, range(train_len, train_len + val_len))
     test_dataset = Subset(dataset, range(train_len + val_len, total_len))
 
-    batch_size = 1024
+    batch_size = 512
     num_workers = 4
-    num_epochs = 100
+    num_epochs = 35
     loss_history = []
     val_loss_history = []
     r2_history = []
     val_r2_history = []
-    patience = 30
+    patience = 10
     best_val_r2 = -np.inf
     patience_counter = 0
 
@@ -179,11 +179,19 @@ if __name__ == "__main__":
         # Step the scheduler
         scheduler.step()
 
-    # Save the final model
+    # Save the model
     root_dir = "topological_training/models"
     if not os.path.exists(root_dir):
         os.makedirs(root_dir)
-    file_name = f"model_{len(os.listdir(root_dir))}.pth"
+
+    existing_models = [name for name in os.listdir(root_dir) if name.startswith("model_")]
+    if existing_models:
+        existing_indices = [int(name.split("_")[1].split(".")[0]) for name in existing_models]
+        model_index = max(existing_indices) + 1
+    else:
+        model_index = 0
+
+    file_name = f"model_{model_index}.pth"
     model_path = os.path.join(root_dir, file_name)
 
     torch.save(
@@ -201,26 +209,19 @@ if __name__ == "__main__":
     )
     log_message("Model saved to", model_path)
 
-    # Plot the loss and R2 score history
-    plt.figure(figsize=(12, 5))
+    # Save the loss and metrics
+    loss_dir = f"lightpath_training/loss_training_{model_index}"
+    if not os.path.exists(loss_dir):
+        os.makedirs(loss_dir)
 
-    plt.subplot(1, 2, 1)
-    plt.plot(loss_history, label="Training Loss")
-    plt.plot(val_loss_history, label="Validation Loss")
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title("Loss Over Time")
-    plt.legend()
-    plt.grid()
+    with open(os.path.join(loss_dir, "loss_history.json"), "w") as f:
+        json.dump(loss_history, f)
 
-    plt.subplot(1, 2, 2)
-    plt.plot(r2_history, label="Training R2 Score")
-    plt.plot(val_r2_history, label="Validation R2 Score")
-    plt.xlabel("Epoch")
-    plt.ylabel("R2 Score")
-    plt.title("R2 Score Over Time")
-    plt.legend()
-    plt.grid()
+    with open(os.path.join(loss_dir, "val_loss_history.json"), "w") as f:
+        json.dump(val_loss_history, f)
 
-    plt.tight_layout()
-    plt.savefig(f"topological_training/loss_{file_name}.png")
+    with open(os.path.join(loss_dir, "r2_history.json"), "w") as f:
+        json.dump(r2_history, f)
+
+    with open(os.path.join(loss_dir, "val_r2_history.json"), "w") as f:
+        json.dump(val_r2_history, f)
