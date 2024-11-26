@@ -210,7 +210,7 @@ if __name__ == "__main__":
     log_message("Model saved to", model_path)
 
     # Save the loss and metrics
-    loss_dir = f"lightpath_training/loss_training_{model_index}"
+    loss_dir = f"topological_training/loss_training_{model_index}"
     if not os.path.exists(loss_dir):
         os.makedirs(loss_dir)
 
