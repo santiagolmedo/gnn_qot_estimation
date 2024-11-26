@@ -6,6 +6,8 @@ import numpy as np
 import os
 import json
 from datetime import datetime
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from lightpath_training.dataset import LightpathDataset
 from lightpath_training.models import LightpathGNN
@@ -136,10 +138,39 @@ if __name__ == "__main__":
     with open(os.path.join(results_folder, "results.json"), "w") as f:
         json.dump(results, f, indent=4)
 
+    num_samples = 30000
+
+    print("Plotting the results...")
+
     # Plot the results and save each to the folder
     for i in range(model_params["output_dim"]):
+        # Filter out invalid values
+        valid_indices = ~np.isnan(y_true_descaled[:, i]) & ~np.isnan(y_pred_descaled[:, i]) & \
+                        ~np.isinf(y_true_descaled[:, i]) & ~np.isinf(y_pred_descaled[:, i])
+
+        y_true_valid = y_true_descaled[valid_indices, i]
+        y_pred_valid = y_pred_descaled[valid_indices, i]
+
+        # Get the number of valid points
+        num_valid_points = y_true_valid.shape[0]
+
+        # Sample the data if there are too many points
+        if num_valid_points > num_samples:
+            sampled_indices = np.random.choice(num_valid_points, size=num_samples, replace=False)
+            y_true_plot = y_true_valid[sampled_indices]
+            y_pred_plot = y_pred_valid[sampled_indices]
+        else:
+            y_true_plot = y_true_valid
+            y_pred_plot = y_pred_valid
+
+        # Skip plotting if there are no valid points
+        if len(y_true_plot) == 0 or len(y_pred_plot) == 0:
+            print(f"No valid data to plot for {output_names[i]}. Skipping plot.")
+            continue
+
+        # Plot the results
         plt.figure()
-        plt.scatter(y_true_descaled[:, i], y_pred_descaled[:, i], alpha=0.5)
+        plt.scatter(y_true_plot, y_pred_plot, alpha=0.5)
         plt.xlabel("True")
         plt.ylabel("Predicted")
         plt.title(f"{output_names[i]} Prediction")
