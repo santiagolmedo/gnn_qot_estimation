@@ -1,31 +1,56 @@
+# topological_training/test.py
+
 import torch
 from torch_geometric.loader import DataLoader
-from data_utils import load_topological_graphs_from_pickle
-from topological_training.models import TopologicalGNN
-from sklearn.metrics import r2_score
-import matplotlib.pyplot as plt
-import os
-from datetime import datetime
-import json
+from torch.utils.data import Subset
+from sklearn.metrics import r2_score, mean_squared_error
 import numpy as np
+import os
+import json
+from datetime import datetime
+from topological_training.dataset import TopologicalDataset
+from topological_training.models import TopologicalGNN
 from constants import TARGET_RANGES
 
-
 def min_max_descale(scaled_value, min_value, max_value):
+    """Descale the scaled value using min-max scaling."""
     return scaled_value * (max_value - min_value) + min_value
 
-
 if __name__ == "__main__":
-    # Load the data and FEATURES
-    data_list, _ = load_topological_graphs_from_pickle()
+    # Load the dataset
+    dataset = TopologicalDataset(directory="networkx_graphs_topological")
+    edge_dim = dataset.edge_dim
 
-    # Split the data into training and testing sets
-    test_data = data_list[int(len(data_list) * 0.8) :]
-    test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
+    # Split the dataset into training, validation, and testing sets without randomization
+    total_len = len(dataset)
+    train_len = int(total_len * 0.7)
+    val_len = int(total_len * 0.15)
+    test_len = total_len - train_len - val_len
+
+    # Create subsets for training, validation, and testing
+    train_dataset_full = Subset(dataset, range(0, train_len))
+    val_dataset = Subset(dataset, range(train_len, train_len + val_len))
+    test_dataset = Subset(dataset, range(train_len + val_len, total_len))
+
+    # Create DataLoader for the test dataset
+    batch_size = 512  # Adjust batch size as needed
+    num_workers = 4
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     # Load the saved model state and parameters from the last training session
-    file_name = f"model_{len(os.listdir('topological_training/models')) - 1}"
-    model_path = f"topological_training/models/{file_name}.pth"
+    models_dir = "topological_training/models"
+    model_files = [f for f in os.listdir(models_dir) if f.startswith("model_") and f.endswith(".pth")]
+    if not model_files:
+        raise FileNotFoundError("No saved models found in the 'models' directory.")
+
+    # Find the latest model based on the index
+    model_indices = [int(f.split("_")[1].split(".")[0]) for f in model_files]
+    latest_model_index = max(model_indices)
+    model_file_name = f"model_{latest_model_index}.pth"
+    model_path = os.path.join(models_dir, model_file_name)
+    print(f"Loading model from {model_path}")
+
+    # Load the model checkpoint
     checkpoint = torch.load(model_path)
     model_params = checkpoint["model_params"]
 
@@ -35,6 +60,7 @@ if __name__ == "__main__":
         hidden_channels=model_params["hidden_channels"],
         out_channels=model_params["output_dim"],
         edge_dim=model_params["edge_dim"],
+        dropout_p=0.0,  # Dropout is not used during evaluation
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
@@ -45,31 +71,24 @@ if __name__ == "__main__":
 
     # Evaluate the model
     model.eval()
-    test_loss = 0
     y_true_list = []
     y_pred_list = []
-
-    criterion = torch.nn.SmoothL1Loss()
 
     with torch.no_grad():
         for data in test_loader:
             data = data.to(device)
-            out = model(data)
-            y = data.y.view(-1, model_params["output_dim"])
-            loss = criterion(out, y)
-            test_loss += loss.item() * data.num_graphs
+            out = model(data)  # Output shape: [batch_size, output_dim]
+            y = data.y.view(-1, model_params["output_dim"]).to(device)
 
-            y_true_list.append(y.cpu())
-            y_pred_list.append(out.cpu())
+            # Collect true and predicted values
+            y_true_list.append(y.cpu().numpy())
+            y_pred_list.append(out.cpu().numpy())
 
-    test_loss /= len(test_loader.dataset)
-    print(f"Test SmoothL1 Loss: {test_loss:.4f}")
+    # Concatenate the lists to form arrays
+    y_true = np.vstack(y_true_list)
+    y_pred = np.vstack(y_pred_list)
 
-    # Convert y_true and y_pred to numpy arrays
-    y_true = torch.cat(y_true_list, dim=0).numpy()
-    y_pred = torch.cat(y_pred_list, dim=0).numpy()
-
-    # Descale the outputs
+    # Descale the outputs to their original scale
     output_keys = ["osnr", "snr", "ber"]
     y_true_descaled = []
     y_pred_descaled = []
@@ -79,19 +98,21 @@ if __name__ == "__main__":
         y_true_descaled.append(min_max_descale(y_true[:, i], min_val, max_val))
         y_pred_descaled.append(min_max_descale(y_pred[:, i], min_val, max_val))
 
-    y_true = np.column_stack(y_true_descaled)
-    y_pred = np.column_stack(y_pred_descaled)
+    # Combine the descaled outputs into arrays
+    y_true_descaled = np.column_stack(y_true_descaled)
+    y_pred_descaled = np.column_stack(y_pred_descaled)
 
-    # Compute R2 per output
-    r2 = r2_score(y_true, y_pred, multioutput="raw_values")
-
-    print(f"R2 Score per output: {r2}")
+    # Compute R2 Score and MSE per output
+    r2 = r2_score(y_true_descaled, y_pred_descaled, multioutput="raw_values")
+    mse = mean_squared_error(y_true_descaled, y_pred_descaled, multioutput="raw_values")
+    print(f"Test R2 Score per output: {r2}")
+    print(f"Test MSE per output: {mse}")
 
     # Define the names of the outputs
     output_names = ["OSNR", "SNR", "BER"]
 
-    # Create the results folder
-    results_folder = f"topological_training/results/results_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file_name}"
+    # Create the results folder with timestamp and model index
+    results_folder = f"topological_training/results/results_{datetime.now().strftime('%Y%m%d_%H%M%S')}_model_{latest_model_index}"
     os.makedirs(results_folder, exist_ok=True)
 
     # Save the evaluation metrics to a JSON file
@@ -99,25 +120,21 @@ if __name__ == "__main__":
     for i in range(model_params["output_dim"]):
         results[output_names[i]] = {
             "R2": float(r2[i]),
-            "Test_SmoothL1_Loss": float(test_loss),
+            "Test_MSE": float(mse[i]),
         }
 
-    with open(os.path.join(results_folder, "results.json"), "w") as f:
+    with open(os.path.join(results_folder, "results_metrics.json"), "w") as f:
         json.dump(results, f, indent=4)
 
-    # Plot the results and save each to the folder
-    for i in range(model_params["output_dim"]):
-        plt.figure()
-        plt.scatter(y_true[:, i], y_pred[:, i], alpha=0.5)
-        plt.xlabel("True")
-        plt.ylabel("Predicted")
-        if i < len(output_names):
-            plt.title(output_names[i])
-            filename = f"{output_names[i]}_results.png"
-        else:
-            plt.title(f"Output {i + 1}")
-            filename = f"Output_{i + 1}_results.png"
-        plt.grid(True)
-        plt.tight_layout()
-        plt.savefig(os.path.join(results_folder, filename))
-        plt.close()
+    # Save the predictions and true values to JSON files
+    # Convert arrays to lists for JSON serialization
+    y_true_descaled_list = y_true_descaled.tolist()
+    y_pred_descaled_list = y_pred_descaled.tolist()
+
+    with open(os.path.join(results_folder, "y_true_descaled.json"), "w") as f:
+        json.dump(y_true_descaled_list, f)
+
+    with open(os.path.join(results_folder, "y_pred_descaled.json"), "w") as f:
+        json.dump(y_pred_descaled_list, f)
+
+    print(f"Results saved to {results_folder}")

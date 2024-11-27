@@ -138,46 +138,15 @@ if __name__ == "__main__":
     with open(os.path.join(results_folder, "results.json"), "w") as f:
         json.dump(results, f, indent=4)
 
-    num_samples = 30000
+    # Save the predictions and true values to JSON files
+    # Convert arrays to lists for JSON serialization
+    y_true_descaled_list = y_true_descaled.tolist()
+    y_pred_descaled_list = y_pred_descaled.tolist()
 
-    print("Plotting the results...")
+    with open(os.path.join(results_folder, "y_true_descaled.json"), "w") as f:
+        json.dump(y_true_descaled_list, f)
 
-    # Plot the results and save each to the folder
-    for i in range(model_params["output_dim"]):
-        # Filter out invalid values
-        valid_indices = ~np.isnan(y_true_descaled[:, i]) & ~np.isnan(y_pred_descaled[:, i]) & \
-                        ~np.isinf(y_true_descaled[:, i]) & ~np.isinf(y_pred_descaled[:, i])
-
-        y_true_valid = y_true_descaled[valid_indices, i]
-        y_pred_valid = y_pred_descaled[valid_indices, i]
-
-        # Get the number of valid points
-        num_valid_points = y_true_valid.shape[0]
-
-        # Sample the data if there are too many points
-        if num_valid_points > num_samples:
-            sampled_indices = np.random.choice(num_valid_points, size=num_samples, replace=False)
-            y_true_plot = y_true_valid[sampled_indices]
-            y_pred_plot = y_pred_valid[sampled_indices]
-        else:
-            y_true_plot = y_true_valid
-            y_pred_plot = y_pred_valid
-
-        # Skip plotting if there are no valid points
-        if len(y_true_plot) == 0 or len(y_pred_plot) == 0:
-            print(f"No valid data to plot for {output_names[i]}. Skipping plot.")
-            continue
-
-        # Plot the results
-        plt.figure()
-        plt.scatter(y_true_plot, y_pred_plot, alpha=0.5)
-        plt.xlabel("True")
-        plt.ylabel("Predicted")
-        plt.title(f"{output_names[i]} Prediction")
-        plt.grid(True)
-        plt.tight_layout()
-        filename = f"{output_names[i]}_results.png"
-        plt.savefig(os.path.join(results_folder, filename))
-        plt.close()
+    with open(os.path.join(results_folder, "y_pred_descaled.json"), "w") as f:
+        json.dump(y_pred_descaled_list, f)
 
     print(f"Results saved to {results_folder}")
